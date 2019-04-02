@@ -194,10 +194,16 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
 if( workflow.profile == 'awsbatch') {
   // AWSBatch sanity checking
   if (!params.awsqueue || !params.awsregion) exit 1, "Specify correct --awsqueue and --awsregion parameters on AWSBatch!"
-  if (!workflow.workDir.startsWith('s3') || !params.outdir.startsWith('s3')) exit 1, "Specify S3 URLs for workDir and outdir parameters on AWSBatch!"
-  // Check workDir/outdir paths to be S3 buckets if running on AWSBatch
+
+  // Check outdir paths to be S3 buckets if running on AWSBatch
   // related: https://github.com/nextflow-io/nextflow/issues/813
-  if (!workflow.workDir.startsWith('s3:') || !params.outdir.startsWith('s3:')) exit 1, "Workdir or Outdir not on S3 - specify S3 Buckets for each to run on AWSBatch!"
+  // work-dir is checked by nextflow when using awsbatch executor
+  // workflow.workDir therefore has the s3:// prefix stripped already
+  if ( !params.outdir.startsWith('s3:') ) exit 1, "outdir not on S3 - specify S3 Buckets to run on AWSBatch!"
+  
+  // Check tracedir path not to be S3 bucket
+  // relatedi: https://github.com/nextflow-io/nextflow/issues/916
+  if ( params.tracedir.startsWith('s3:') ) exit 1, "Please specify a local directory to put tracefiles into. Tracefiles cannot be stored in S3 object storage."
 }
 
 // Stage config files
