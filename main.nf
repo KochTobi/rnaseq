@@ -194,10 +194,16 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
 if( workflow.profile == 'awsbatch') {
   // AWSBatch sanity checking
   if (!params.awsqueue || !params.awsregion) exit 1, "Specify correct --awsqueue and --awsregion parameters on AWSBatch!"
-  if (!workflow.workDir.startsWith('s3') || !params.outdir.startsWith('s3')) exit 1, "Specify S3 URLs for workDir and outdir parameters on AWSBatch!"
-  // Check workDir/outdir paths to be S3 buckets if running on AWSBatch
+
+  // Check outdir paths to be S3 buckets if running on AWSBatch
   // related: https://github.com/nextflow-io/nextflow/issues/813
-  if (!workflow.workDir.startsWith('s3:') || !params.outdir.startsWith('s3:')) exit 1, "Workdir or Outdir not on S3 - specify S3 Buckets for each to run on AWSBatch!"
+  // work-dir is checked by nextflow when using awsbatch executor
+  // workflow.workDir therefore has the s3:// prefix stripped already
+  if ( !params.outdir.startsWith('s3:') ) exit 1, "outdir not on S3 - specify S3 Buckets to run on AWSBatch!"
+  
+  // Check tracedir path not to be S3 bucket
+  // relatedi: https://github.com/nextflow-io/nextflow/issues/916
+  if ( params.tracedir.startsWith('s3:') ) exit 1, "Please specify a local directory to put tracefiles into. Tracefiles cannot be stored in S3 object storage."
 }
 
 // Stage config files
@@ -852,7 +858,6 @@ process preseq {
  * STEP 6 Mark duplicates
  */
 process markDuplicates {
-    label 'low_memory'
     tag "${bam.baseName - '.sorted'}"
     publishDir "${params.outdir}/markDuplicates", mode: 'copy',
         saveAs: {filename -> filename.indexOf("_metrics.txt") > 0 ? "metrics/$filename" : "$filename"}
@@ -869,14 +874,10 @@ process markDuplicates {
     file "${bam.baseName}.markDups.bam.bai"
 
     script:
-    if( !task.memory ){
-        log.info "[Picard MarkDuplicates] Available memory not known - defaulting to 3GB. Specify process memory requirements to change this."
-        avail_mem = 3
-    } else {
-        avail_mem = task.memory.toGiga()
-    }
+    markdup_java_options = (task.memory.toGiga() > 8) ? ${params.markdup_java_options} : "\"-Xms" +  (task.memory.toGiga() / 2 )+"g "+ "-Xmx" + (task.memory.toGiga() - 1)+ "g\""
+
     """
-    picard -Xmx${avail_mem}g MarkDuplicates \\
+    picard ${markdup_java_options} MarkDuplicates \\
         INPUT=$bam \\
         OUTPUT=${bam.baseName}.markDups.bam \\
         METRICS_FILE=${bam.baseName}.markDups_metrics.txt \\

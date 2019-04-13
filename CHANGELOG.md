@@ -1,6 +1,6 @@
 # nf-core/rnaseq: Changelog
 
-## Version 1.3dev
+## Version 1.3
 
 #### Pipeline Updates
 * Added configurable options to specify group attributes for featureCounts [#144](https://github.com/nf-core/rnaseq/issues/144)
@@ -13,6 +13,7 @@
 #### Bug fixes
 * Fixing HISAT2 Index Building for large reference genomes [#153](https://github.com/nf-core/rnaseq/issues/153)
 * Fixing HISAT2 BAM sorting using more memory than available on the system
+* Fixing MarkDuplicates memory consumption issues following [#179](https://github.com/nf-core/rnaseq/pull/179)
 
 
 #### Dependency Updates
